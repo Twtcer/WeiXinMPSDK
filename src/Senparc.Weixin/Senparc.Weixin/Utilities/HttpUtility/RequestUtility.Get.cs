@@ -1,7 +1,7 @@
 ﻿#region Apache License Version 2.0
 /*----------------------------------------------------------------
 
-Copyright 2017 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
+Copyright 2018 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 except in compliance with the License. You may obtain a copy of the License at
@@ -19,7 +19,7 @@ Detail: https://github.com/JeffreySu/WeiXinMPSDK/blob/master/license.md
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2017 Senparc
+    Copyright (C) 2018 Senparc
 
     文件名：RequestUtility.Get.cs
     文件功能描述：获取请求结果（Get）
@@ -100,8 +100,10 @@ namespace Senparc.Weixin.HttpUtility
 
             var handler = new HttpClientHandler
             {
-                CookieContainer = cookieContainer ?? new CookieContainer(),
                 UseCookies = true,
+                CookieContainer = cookieContainer ?? new CookieContainer(),
+                UseProxy = _webproxy != null,
+                Proxy = _webproxy,
             };
 
             if (cer != null)
@@ -133,10 +135,14 @@ namespace Senparc.Weixin.HttpUtility
             wc.Encoding = encoding ?? Encoding.UTF8;
             return wc.DownloadString(url);
 #else
-            HttpClient httpClient = new HttpClient();
-            var t = httpClient.GetStringAsync(url);
-            t.Wait();
-            return t.Result;
+            var handler = new HttpClientHandler
+            {
+                UseProxy = _webproxy != null,
+                Proxy = _webproxy,
+            };
+
+            HttpClient httpClient = new HttpClient(handler);
+            return httpClient.GetStringAsync(url).Result;
 #endif
         }
 
@@ -175,9 +181,7 @@ namespace Senparc.Weixin.HttpUtility
 #else
 
             var httpClient = HttpGet_Common_NetCore(url, cookieContainer, encoding, cer, refererUrl, useAjax, timeOut);
-            var t = httpClient.GetStringAsync(url);
-            t.Wait();
-            return t.Result;
+            return httpClient.GetStringAsync(url).Result;
 #endif
         }
 
@@ -244,15 +248,19 @@ namespace Senparc.Weixin.HttpUtility
         /// <returns></returns>
         public static async Task<string> HttpGetAsync(string url, Encoding encoding = null)
         {
-
-
 #if NET35 || NET40 || NET45
             WebClient wc = new WebClient();
             wc.Proxy = _webproxy;
             wc.Encoding = encoding ?? Encoding.UTF8;
             return await wc.DownloadStringTaskAsync(url);
 #else
-            HttpClient httpClient = new HttpClient();
+            var handler = new HttpClientHandler
+            {
+                UseProxy = _webproxy != null,
+                Proxy = _webproxy,
+            };
+
+            HttpClient httpClient = new HttpClient(handler);
             return await httpClient.GetStringAsync(url);
 #endif
 

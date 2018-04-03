@@ -1,7 +1,7 @@
 ﻿#region Apache License Version 2.0
 /*----------------------------------------------------------------
 
-Copyright 2017 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
+Copyright 2018 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 except in compliance with the License. You may obtain a copy of the License at
@@ -19,7 +19,7 @@ Detail: https://github.com/JeffreySu/WeiXinMPSDK/blob/master/license.md
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2017 Senparc
+    Copyright (C) 2018 Senparc
   
     文件名：RedPackApi.Via.cs
     文件功能描述：RedPackApi.cs 的部分类，用于存放服务商的接口
@@ -69,7 +69,7 @@ namespace Senparc.Weixin.MP.TenPayLibV3
         /// <param name="iP">发送红包的服务器地址</param>
         /// <param name="redPackAmount">付款金额，单位分。红包金额大于200时，请求参数scene必传。</param>
         /// <param name="wishingWord">红包发放总人数</param>
-        /// <param name="actionName">红包祝福语</param>
+        /// <param name="actionName">红包祝福语（请注意活动名称长度，官方文档提示为32个字符，实际限制不足32个字符）</param>
         /// <param name="remark">活动描述，用于低版本微信显示</param>
         /// <param name="nonceStr">将nonceStr随机字符串返回，开发者可以存到数据库用于校验</param>
         /// <param name="paySign">将支付签名返回，开发者可以存到数据库用于校验</param>
@@ -287,6 +287,7 @@ namespace Senparc.Weixin.MP.TenPayLibV3
 
         #endregion
 
+#if !NET35 && !NET40
         #region 异步方法
 
 
@@ -297,5 +298,6 @@ namespace Senparc.Weixin.MP.TenPayLibV3
         #endregion
 
         #endregion
+#endif
     }
 }

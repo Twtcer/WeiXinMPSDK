@@ -1,5 +1,5 @@
 ﻿/*----------------------------------------------------------------
-    Copyright (C) 2017 Senparc
+    Copyright (C) 2018 Senparc
     
     文件名：MailListApi.cs
     文件功能描述：通讯录同步接口
@@ -35,6 +35,10 @@
  
     修改标识：Senparc - 20171017
     修改描述：v1.2.0 部门id改为long类型
+
+    修改标识：Senparc - 20171220
+    修改描述：v1.2.9 为OAuth Url添加agendId参数（可选）
+
 ----------------------------------------------------------------*/
 
 /*
@@ -92,7 +96,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = "https://qyapi.weixin.qq.com/cgi-bin/user/create?access_token={0}";
+                var url = Config.ApiWorkHost + "/cgi-bin/user/create?access_token={0}";
 
                 var data = new
                 {
@@ -131,7 +135,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/get?access_token={0}&userid={1}", accessToken.AsUrlData(), userId.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/get?access_token={0}&userid={1}", accessToken.AsUrlData(), userId.AsUrlData());
 
                 return Get.GetJson<GetMemberResult>(url);
             }, accessTokenOrAppKey);
@@ -166,7 +170,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = "https://qyapi.weixin.qq.com/cgi-bin/user/update?access_token={0}";
+                var url = Config.ApiWorkHost + "/cgi-bin/user/update?access_token={0}";
 
                 var data = new
                 {
@@ -205,7 +209,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/delete?access_token={0}&userid={1}", accessToken.AsUrlData(), userId.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/delete?access_token={0}&userid={1}", accessToken.AsUrlData(), userId.AsUrlData());
 
                 return Get.GetJson<WorkJsonResult>(url);
             }, accessTokenOrAppKey);
@@ -224,7 +228,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/batchdelete?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/batchdelete?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -253,9 +257,9 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                //var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/simplelist?access_token={0}&department_id={1}&fetch_child={2}&status={3}", accessToken.AsUrlData(), departmentId, fetchChild, status);
+                //var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/simplelist?access_token={0}&department_id={1}&fetch_child={2}&status={3}", accessToken.AsUrlData(), departmentId, fetchChild, status);
 
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/simplelist?access_token={0}&department_id={1}&fetch_child={2}", accessToken.AsUrlData(), departmentId, fetchChild);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/simplelist?access_token={0}&department_id={1}&fetch_child={2}", accessToken.AsUrlData(), departmentId, fetchChild);
 
                 return Get.GetJson<GetDepartmentMemberResult>(url, maxJsonLength: maxJsonLength);
             }, accessTokenOrAppKey);
@@ -279,9 +283,9 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                //var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/list?access_token={0}&department_id={1}&fetch_child={2}&status={3}", accessToken.AsUrlData(), departmentId, fetchChild, status);
+                //var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/list?access_token={0}&department_id={1}&fetch_child={2}&status={3}", accessToken.AsUrlData(), departmentId, fetchChild, status);
 
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/list?access_token={0}&department_id={1}&fetch_child={2}", accessToken.AsUrlData(), departmentId, fetchChild);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/list?access_token={0}&department_id={1}&fetch_child={2}", accessToken.AsUrlData(), departmentId, fetchChild);
 
                 return Get.GetJson<GetDepartmentMemberInfoResult>(url, maxJsonLength: maxJsonLength);
             }, accessTokenOrAppKey);
@@ -308,7 +312,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/department/create?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/department/create?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -340,7 +344,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/department/update?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/department/update?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -368,7 +372,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/department/delete?access_token={0}&id={1}", accessToken.AsUrlData(), id);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/department/delete?access_token={0}&id={1}", accessToken.AsUrlData(), id);
 
                 return Get.GetJson<WorkJsonResult>(url);
             }, accessTokenOrAppKey);
@@ -386,7 +390,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/department/list?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/department/list?access_token={0}", accessToken.AsUrlData());
 
                 if (id.HasValue)
                 {
@@ -415,7 +419,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/create?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/create?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -444,7 +448,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/update?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/update?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -468,7 +472,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/delete?access_token={0}&tagid={1}", accessToken.AsUrlData(), tagId);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/delete?access_token={0}&tagid={1}", accessToken.AsUrlData(), tagId);
 
                 return Get.GetJson<WorkJsonResult>(url);
             }, accessTokenOrAppKey);
@@ -486,7 +490,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/get?access_token={0}&tagid={1}", accessToken.AsUrlData(), tagId);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/get?access_token={0}&tagid={1}", accessToken.AsUrlData(), tagId);
 
                 return Get.GetJson<GetTagMemberResult>(url);
             }, accessTokenOrAppKey);
@@ -507,7 +511,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/addtagusers?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/addtagusers?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -537,7 +541,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/deltagusers?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/deltagusers?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -562,7 +566,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/list?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/list?access_token={0}", accessToken.AsUrlData());
 
                 return Get.GetJson<GetTagListResult>(url);
             }, accessTokenOrAppKey);
@@ -586,7 +590,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return ApiHandlerWapper.TryCommonApi(accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/invite/send?access_token={0}", accessToken);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/invite/send?access_token={0}", accessToken);
 
                 var data = new
                 {
@@ -639,7 +643,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = "https://qyapi.weixin.qq.com/cgi-bin/user/create?access_token={0}";
+                var url = Config.ApiWorkHost + "/cgi-bin/user/create?access_token={0}";
 
                 var data = new
                 {
@@ -678,7 +682,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/get?access_token={0}&userid={1}", accessToken.AsUrlData(), userId.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/get?access_token={0}&userid={1}", accessToken.AsUrlData(), userId.AsUrlData());
 
                 return await Get.GetJsonAsync<GetMemberResult>(url);
             }, accessTokenOrAppKey);
@@ -713,7 +717,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = "https://qyapi.weixin.qq.com/cgi-bin/user/update?access_token={0}";
+                var url = Config.ApiWorkHost + "/cgi-bin/user/update?access_token={0}";
 
                 var data = new
                 {
@@ -751,7 +755,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/delete?access_token={0}&userid={1}", accessToken.AsUrlData(), userId.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/delete?access_token={0}&userid={1}", accessToken.AsUrlData(), userId.AsUrlData());
 
                 return await Get.GetJsonAsync<WorkJsonResult>(url);
             }, accessTokenOrAppKey);
@@ -769,7 +773,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/batchdelete?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/batchdelete?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -799,9 +803,9 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                //var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/simplelist?access_token={0}&department_id={1}&fetch_child={2}&status={3}", accessToken.AsUrlData(), departmentId, fetchChild, status);
+                //var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/simplelist?access_token={0}&department_id={1}&fetch_child={2}&status={3}", accessToken.AsUrlData(), departmentId, fetchChild, status);
 
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/simplelist?access_token={0}&department_id={1}&fetch_child={2}", accessToken.AsUrlData(), departmentId, fetchChild);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/simplelist?access_token={0}&department_id={1}&fetch_child={2}", accessToken.AsUrlData(), departmentId, fetchChild);
 
                 return await Get.GetJsonAsync<GetDepartmentMemberResult>(url, maxJsonLength: maxJsonLength);
             }, accessTokenOrAppKey);
@@ -825,9 +829,9 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                //var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/list?access_token={0}&department_id={1}&fetch_child={2}&status={3}", accessToken.AsUrlData(), departmentId, fetchChild, status);
+                //var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/list?access_token={0}&department_id={1}&fetch_child={2}&status={3}", accessToken.AsUrlData(), departmentId, fetchChild, status);
 
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/user/list?access_token={0}&department_id={1}&fetch_child={2}", accessToken.AsUrlData(), departmentId, fetchChild);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/user/list?access_token={0}&department_id={1}&fetch_child={2}", accessToken.AsUrlData(), departmentId, fetchChild);
 
                 return await Get.GetJsonAsync<GetDepartmentMemberInfoResult>(url, maxJsonLength: maxJsonLength);
             }, accessTokenOrAppKey);
@@ -855,7 +859,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/department/create?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/department/create?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -887,7 +891,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/department/update?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/department/update?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -915,7 +919,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/department/delete?access_token={0}&id={1}", accessToken.AsUrlData(), id);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/department/delete?access_token={0}&id={1}", accessToken.AsUrlData(), id);
 
                 return await Get.GetJsonAsync<WorkJsonResult>(url);
             }, accessTokenOrAppKey);
@@ -933,7 +937,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/department/list?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/department/list?access_token={0}", accessToken.AsUrlData());
 
                 if (id.HasValue)
                 {
@@ -962,7 +966,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/create?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/create?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -991,7 +995,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = "https://qyapi.weixin.qq.com/cgi-bin/tag/update?access_token={0}";
+                var url = Config.ApiWorkHost + "/cgi-bin/tag/update?access_token={0}";
 
                 var data = new
                 {
@@ -1015,7 +1019,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/delete?access_token={0}&tagid={1}", accessToken.AsUrlData(), tagId);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/delete?access_token={0}&tagid={1}", accessToken.AsUrlData(), tagId);
 
                 return await Get.GetJsonAsync<WorkJsonResult>(url);
             }, accessTokenOrAppKey);
@@ -1034,7 +1038,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/get?access_token={0}&tagid={1}", accessToken.AsUrlData(), tagId);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/get?access_token={0}&tagid={1}", accessToken.AsUrlData(), tagId);
 
                 return await Get.GetJsonAsync<GetTagMemberResult>(url);
             }, accessTokenOrAppKey);
@@ -1055,7 +1059,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/addtagusers?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/addtagusers?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -1084,7 +1088,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/deltagusers?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/deltagusers?access_token={0}", accessToken.AsUrlData());
 
                 var data = new
                 {
@@ -1110,7 +1114,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/tag/list?access_token={0}", accessToken.AsUrlData());
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/tag/list?access_token={0}", accessToken.AsUrlData());
 
                 return await Get.GetJsonAsync<GetTagListResult>(url);
             }, accessTokenOrAppKey);
@@ -1135,7 +1139,7 @@ namespace Senparc.Weixin.Work.AdvancedAPIs
         {
             return await ApiHandlerWapper.TryCommonApiAsync(async accessToken =>
             {
-                var url = string.Format("https://qyapi.weixin.qq.com/cgi-bin/invite/send?access_token={0}", accessToken);
+                var url = string.Format(Config.ApiWorkHost + "/cgi-bin/invite/send?access_token={0}", accessToken);
 
                 var data = new
                 {

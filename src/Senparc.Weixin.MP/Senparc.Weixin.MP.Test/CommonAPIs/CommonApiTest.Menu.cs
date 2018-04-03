@@ -1,7 +1,7 @@
 ﻿#region Apache License Version 2.0
 /*----------------------------------------------------------------
 
-Copyright 2017 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
+Copyright 2018 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 except in compliance with the License. You may obtain a copy of the License at
@@ -41,7 +41,7 @@ namespace Senparc.Weixin.MP.Test.CommonAPIs
 
             ButtonGroup bg = new ButtonGroup();
 
-   //二级菜单
+            //二级菜单
             var subButton = new SubButton()
             {
                 name = "二级菜单"
@@ -131,7 +131,7 @@ namespace Senparc.Weixin.MP.Test.CommonAPIs
         [TestMethod]
         public void GetMenuTest()
         {
-            //return;//已经通过测试
+            return;//已经通过测试
             var accessToken = AccessTokenContainer.GetAccessToken(_appId);
 
             var result = CommonApi.GetMenu(accessToken);
