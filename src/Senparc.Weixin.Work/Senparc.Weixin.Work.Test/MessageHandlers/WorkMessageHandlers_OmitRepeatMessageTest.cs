@@ -1,7 +1,7 @@
 ﻿#region Apache License Version 2.0
 /*----------------------------------------------------------------
 
-Copyright 2018 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
+Copyright 2019 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 except in compliance with the License. You may obtain a copy of the License at
@@ -22,39 +22,36 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Senparc.Weixin.Context;
+using Senparc.NeuChar.Context;
 using Senparc.Weixin.Work.Entities;
+using Senparc.Weixin.Work.MessageContexts;
 using Senparc.Weixin.Work.MessageHandlers;
 
 namespace Senparc.Weixin.Work.Test.MessageHandlers
 {
-    public class OmitRepeatMessageMessageHandlers : WorkMessageHandler<MessageContext<IRequestMessageBase, IResponseMessageBase>>
+    public class OmitRepeatMessageMessageHandlers : WorkMessageHandler<DefaultWorkMessageContext>
     {
         public string RunStep { get; set; }
 
         public OmitRepeatMessageMessageHandlers(XDocument requestDoc)
             : base(requestDoc, new PostModel()
                                 {
-                                    Msg_Signature = "845997ceb6e4fd73edd9a377be227848ce20d34f",
-                                    Timestamp = "1412587525",
-                                    Nonce = "1501543730",
+                                    Msg_Signature = "",
+                                    Timestamp = "",
+                                    Nonce = "",
 
-                                    Token = "fzBsmSaI8XE1OwBh",
-                                    EncodingAESKey = "9J8CQ7iF9mLtQDZrUM1loOVQ6oNDxVtBi1DBU2oaewl",
-                                    CorpId = "wx7618c0a6d9358622"
+                                    Token = "",
+                                    EncodingAESKey = "",
+                                    CorpId = ""
                                 })
         {
         }
 
-        public override void OnExecuting()
-        {
-            base.OnExecuting();
-        }
-
-        public override IResponseMessageBase OnTextRequest(RequestMessageText requestMessage)
+        public override IWorkResponseMessageBase OnTextRequest(RequestMessageText requestMessage)
         {
             var responseMessage = base.CreateResponseMessage<ResponseMessageText>();
             responseMessage.Content = requestMessage.Content;
@@ -66,11 +63,16 @@ namespace Senparc.Weixin.Work.Test.MessageHandlers
         /// </summary>
         /// <param name="requestMessage"></param>
         /// <returns></returns>
-        public override IResponseMessageBase DefaultResponseMessage(IRequestMessageBase requestMessage)
+        public override IWorkResponseMessageBase DefaultResponseMessage(IWorkRequestMessageBase requestMessage)
         {
             var responseMessage = this.CreateResponseMessage<ResponseMessageText>();
             responseMessage.Content = "您发送的消息类型暂未被识别。";
             return responseMessage;
+        }
+
+        public override Task BuildResponseMessageAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
     }
 

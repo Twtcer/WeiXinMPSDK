@@ -1,5 +1,5 @@
 ﻿/*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2019 Senparc
     
     文件名：WorkMessageHandler.cs
     文件功能描述：企业号请求的集中处理方法
@@ -19,46 +19,57 @@
     修改标识：heavenwing - 20160909
     修改描述：完善第三方回调事件处理
 
+    修改标识：pekrr1e - 20180503
+    修改描述：v1.4.1 增加“接收通讯录变更事件”
+
+    修改标识：Senparc - 20180909
+    修改描述：v3.1.2 RequestMessageInfo_Contact_Sync 改名为 RequestMessageInfo_Change_Contact；
+                     枚举 ThirdPartyInfo.CONTACT_SYNC 改名为 ThirdPartyInfo.CHANGE_CONTACT；
+                     OnThirdPartyEvent_Contact_Sync 改名为 OnThirdPartyEvent_Change_Contact()
+
+    修改标识：pekrr1e - 20180503
+    修改描述：v3.1.16 优化 MessageHandler 构造函数，提供 PostModel 默认值
+
+    修改标识：Senparc - 20181117
+    修改描述：v3.2.0 Execute() 重写方法名称改为 BuildResponseMessage()
+    
+    修改标识：Senparc - 20181226
+    修改描述：v3.3.2 修改 DateTime 为 DateTimeOffset
+
+    修改标识：Senparc - 20190917
+    修改描述：v3.6.0 支持新版本 MessageHandler 和 WeixinContext，支持使用分布式缓存储存上下文消息
+
 ----------------------------------------------------------------*/
 
 using System;
 using System.IO;
 using System.Xml.Linq;
-using Senparc.Weixin.Context;
+using Senparc.NeuChar.Context;
 using Senparc.Weixin.Exceptions;
-using Senparc.Weixin.MessageHandlers;
+using Senparc.NeuChar.MessageHandlers;
 using Senparc.Weixin.Work.Entities;
 using Senparc.Weixin.Work.Helpers;
 using Senparc.Weixin.Work.Tencent;
+using Senparc.NeuChar;
+using Senparc.NeuChar.ApiHandlers;
+using Senparc.Weixin.Work.AdvancedAPIs;
 
 namespace Senparc.Weixin.Work.MessageHandlers
 {
-    public interface IWorkMessageHandler : IMessageHandler<IRequestMessageBase, IResponseMessageBase>
+    public interface IWorkMessageHandler : IMessageHandler<IWorkRequestMessageBase, IWorkResponseMessageBase>
     {
         /// <summary>
         /// 原始加密信息
         /// </summary>
         EncryptPostData EncryptPostData { get; set; }
-        new IRequestMessageBase RequestMessage { get; set; }
-        new IResponseMessageBase ResponseMessage { get; set; }
+        new IWorkRequestMessageBase RequestMessage { get; set; }
+        new IWorkResponseMessageBase ResponseMessage { get; set; }
     }
 
-    public abstract class WorkMessageHandler<TC> : MessageHandler<TC, IRequestMessageBase, IResponseMessageBase>, IWorkMessageHandler
-        where TC : class, IMessageContext<IRequestMessageBase, IResponseMessageBase>, new()
+    public  abstract partial class WorkMessageHandler<TMC>
+        : MessageHandler<TMC, IWorkRequestMessageBase, IWorkResponseMessageBase>, IWorkMessageHandler
+        where TMC : class, IMessageContext<IWorkRequestMessageBase, IWorkResponseMessageBase>, new()
     {
-        /// <summary>
-        /// 上下文（仅限于当前MessageHandler基类内）
-        /// </summary>
-        public static WeixinContext<TC, IRequestMessageBase, IResponseMessageBase> GlobalWeixinContext = new WeixinContext<TC, IRequestMessageBase, IResponseMessageBase>();
-
-        /// <summary>
-        /// 全局消息上下文
-        /// </summary>
-        public override WeixinContext<TC, IRequestMessageBase, IResponseMessageBase> WeixinContext
-        {
-            get { return GlobalWeixinContext; }
-        }
-
         /// <summary>
         /// 根据ResponseMessageBase获得转换后的ResponseDocument
         /// 注意：这里每次请求都会根据当前的ResponseMessageBase生成一次，如需重用此数据，建议使用缓存或局部变量
@@ -71,7 +82,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
                 {
                     return null;
                 }
-                return EntityHelper.ConvertEntityToXml(ResponseMessage as ResponseMessageBase);
+                return EntityHelper.ConvertEntityToXml(ResponseMessage as WorkResponseMessageBase);
             }
         }
 
@@ -88,8 +99,8 @@ namespace Senparc.Weixin.Work.MessageHandlers
                     return null;
                 }
 
-                var timeStamp = DateTime.Now.Ticks.ToString();
-                var nonce = DateTime.Now.Ticks.ToString();
+                var timeStamp = SystemTime.Now.Ticks.ToString();
+                var nonce = SystemTime.Now.Ticks.ToString();
 
                 WXBizMsgCrypt msgCrype = new WXBizMsgCrypt(_postModel.Token, _postModel.EncodingAESKey, _postModel.CorpId);
                 string finalResponseXml = null;
@@ -118,11 +129,11 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// 请求实体
         /// </summary>
-        public new IRequestMessageBase RequestMessage
+        public new IWorkRequestMessageBase RequestMessage
         {
             get
             {
-                return base.RequestMessage as IRequestMessageBase;
+                return base.RequestMessage as IWorkRequestMessageBase;
             }
             set
             {
@@ -135,11 +146,11 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 正常情况下只有当执行Execute()方法后才可能有值。
         /// 也可以结合Cancel，提前给ResponseMessage赋值。
         /// </summary>
-        public new IResponseMessageBase ResponseMessage
+        public new IWorkResponseMessageBase ResponseMessage
         {
             get
             {
-                return base.ResponseMessage as IResponseMessageBase;
+                return base.ResponseMessage as IWorkResponseMessageBase;
             }
             set
             {
@@ -147,25 +158,33 @@ namespace Senparc.Weixin.Work.MessageHandlers
             }
         }
 
-
-
         private PostModel _postModel;
 
+        /// <summary>
+        /// 请求和响应消息定义
+        /// </summary>
+        public override MessageEntityEnlightener MessageEntityEnlightener { get { return WorkMessageEntityEnlightener.Instance; } }
+
+        public override ApiEnlightener ApiEnlightener { get { return WorkApiEnlightener.Instance; } }
+
+
         public WorkMessageHandler(Stream inputStream, PostModel postModel, int maxRecordCount = 0)
-            : base(inputStream, maxRecordCount, postModel)
+            : base(inputStream, postModel, maxRecordCount)
         {
         }
 
         public WorkMessageHandler(XDocument requestDocument, PostModel postModel, int maxRecordCount = 0)
-            : base(requestDocument, maxRecordCount, postModel)
+            : base(requestDocument, postModel, maxRecordCount)
         {
         }
 
 
-        public override XDocument Init(XDocument postDataDocument, object postData)
+        public override XDocument Init(XDocument postDataDocument, IEncryptPostModel postModel)
         {
-            _postModel = postData as PostModel;
+            _postModel = postModel as PostModel ?? new PostModel();
 
+
+            UsingEcryptMessage = true;//Work中消息都是强制加密的
             var postDataStr = postDataDocument.ToString();
             EncryptPostData = RequestMessageFactory.GetEncryptPostData(postDataStr);
 
@@ -193,15 +212,12 @@ namespace Senparc.Weixin.Work.MessageHandlers
             }
 
             var requestDocument = XDocument.Parse(msgXml);
-            RequestMessage = RequestMessageFactory.GetRequestEntity(requestDocument);
 
-            //记录上下文
-            if (RequestMessage.MsgType != RequestMsgType.DEFAULT && WeixinContextGlobal.UseWeixinContext)
-            {
-                WeixinContext.InsertMessage(RequestMessage);
-            }
+            RequestMessage = RequestMessageFactory.GetRequestEntity<TMC>(new TMC(), doc: requestDocument);
 
             return requestDocument;
+
+            //消息上下文记录将在 base.CommonInitialize() 中根据去重等条件判断后进行添加
         }
 
         /// <summary>
@@ -209,7 +225,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// </summary>
         /// <typeparam name="TR">基于ResponseMessageBase的响应消息类型</typeparam>
         /// <returns></returns>
-        public TR CreateResponseMessage<TR>() where TR : ResponseMessageBase
+        public TR CreateResponseMessage<TR>() where TR : WorkResponseMessageBase
         {
             if (RequestMessage == null)
             {
@@ -220,122 +236,23 @@ namespace Senparc.Weixin.Work.MessageHandlers
         }
 
 
-        public override void Execute()
-        {
-            if (CancelExcute)
-            {
-                return;
-            }
 
-            OnExecuting();
-
-            if (CancelExcute)
-            {
-                return;
-            }
-
-            try
-            {
-                if (RequestMessage == null)
-                {
-                    return;
-                }
-
-                switch (RequestMessage.MsgType)
-                {
-                    case RequestMsgType.DEFAULT://第三方回调
-                        {
-                            if (RequestMessage is IThirdPartyInfoBase)
-                            {
-                                var thirdPartyInfo = RequestMessage as IThirdPartyInfoBase;
-                                TextResponseMessage = OnThirdPartyEvent(thirdPartyInfo);
-                            }
-                            else
-                            {
-                                throw new WeixinException("没有找到合适的消息类型。");
-                            }
-                        }
-                        break;
-                    //以下是普通信息
-                    case RequestMsgType.Text:
-                        {
-                            var requestMessage = RequestMessage as RequestMessageText;
-                            ResponseMessage = OnTextOrEventRequest(requestMessage) ?? OnTextRequest(requestMessage);
-                        }
-                        break;
-                    case RequestMsgType.Location:
-                        ResponseMessage = OnLocationRequest(RequestMessage as RequestMessageLocation);
-                        break;
-                    case RequestMsgType.Image:
-                        ResponseMessage = OnImageRequest(RequestMessage as RequestMessageImage);
-                        break;
-                    case RequestMsgType.Voice:
-                        ResponseMessage = OnVoiceRequest(RequestMessage as RequestMessageVoice);
-                        break;
-                    case RequestMsgType.Video:
-                        ResponseMessage = OnVideoRequest(RequestMessage as RequestMessageVideo);
-                        break;
-                    case RequestMsgType.ShortVideo:
-                        ResponseMessage = OnShortVideoRequest(RequestMessage as RequestMessageShortVideo);
-                        break;
-                    case RequestMsgType.File:
-                        ResponseMessage = OnFileRequest(RequestMessage as RequestMessageFile);
-                        break;
-                    case RequestMsgType.Event:
-                        {
-                            var requestMessageText = (RequestMessage as IRequestMessageEventBase).ConvertToRequestMessageText();
-                            ResponseMessage = OnTextOrEventRequest(requestMessageText) ?? OnEventRequest(RequestMessage as IRequestMessageEventBase);
-                        }
-                        break;
-                    default:
-                        throw new UnknownRequestMsgTypeException("未知的MsgType请求类型", null);
-                }
-
-                //记录上下文
-                if (WeixinContextGlobal.UseWeixinContext && ResponseMessage != null)
-                {
-                    WeixinContext.InsertMessage(ResponseMessage);
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new MessageHandlerException("MessageHandler中Execute()过程发生错误：" + ex.Message, ex);
-            }
-            finally
-            {
-                OnExecuted();
-            }
-        }
-
-
+        [Obsolete("请使用异步方法 OnExecutingAsync()", true)]
         public virtual void OnExecuting()
         {
-            //消息去重
-            if (OmitRepeatedMessage && CurrentMessageContext.RequestMessages.Count > 1)
-            {
-                var lastMessage = CurrentMessageContext.RequestMessages[CurrentMessageContext.RequestMessages.Count - 2];
-                if ((lastMessage.MsgId != 0 && lastMessage.MsgId == RequestMessage.MsgId)//使用MsgId去重
-                    ||
-                    ((lastMessage.CreateTime == RequestMessage.CreateTime) && lastMessage.MsgType != RequestMessage.MsgType)//使用CreateTime去重（OpenId对象已经是同一个）
-                    )
-                {
-                    CancelExcute = true;//重复消息，取消执行
-                    return;
-                }
-            }
-
-            base.OnExecuting();
+            throw new MessageHandlerException("请使用异步方法 OnExecutingAsync()");
         }
 
+        [Obsolete("请使用异步方法 OnExecutedAsync()", true)]
         public virtual void OnExecuted()
         {
-            base.OnExecuted();
+            throw new MessageHandlerException("请使用异步方法 OnExecutedAsync()");
         }
 
         /// <summary>
         /// 默认返回消息（当任何OnXX消息没有被重写，都将自动返回此默认消息）
         /// </summary>
-        public abstract IResponseMessageBase DefaultResponseMessage(IRequestMessageBase requestMessage);
+        public abstract IWorkResponseMessageBase DefaultResponseMessage(IWorkRequestMessageBase requestMessage);
 
         #region 接收消息方法
 
@@ -347,7 +264,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 2、如果返回不为null，则终止执行OnTextRequest或OnEventRequest，返回最终ResponseMessage
         /// 3、如果是事件，则会将RequestMessageEvent自动转为RequestMessageText类型，其中RequestMessageText.Content就是RequestMessageEvent.EventKey
         /// </summary>
-        public virtual IResponseMessageBase OnTextOrEventRequest(RequestMessageText requestMessage)
+        public virtual IWorkResponseMessageBase OnTextOrEventRequest(RequestMessageText requestMessage)
         {
             return null;
         }
@@ -355,7 +272,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// 文字类型请求
         /// </summary>
-        public virtual IResponseMessageBase OnTextRequest(RequestMessageText requestMessage)
+        public virtual IWorkResponseMessageBase OnTextRequest(RequestMessageText requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -363,7 +280,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// 位置类型请求
         /// </summary>
-        public virtual IResponseMessageBase OnLocationRequest(RequestMessageLocation requestMessage)
+        public virtual IWorkResponseMessageBase OnLocationRequest(RequestMessageLocation requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -371,7 +288,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// 图片类型请求
         /// </summary>
-        public virtual IResponseMessageBase OnImageRequest(RequestMessageImage requestMessage)
+        public virtual IWorkResponseMessageBase OnImageRequest(RequestMessageImage requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -379,7 +296,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// 语音类型请求
         /// </summary>
-        public virtual IResponseMessageBase OnVoiceRequest(RequestMessageVoice requestMessage)
+        public virtual IWorkResponseMessageBase OnVoiceRequest(RequestMessageVoice requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -388,7 +305,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// 视频类型请求
         /// </summary>
-        public virtual IResponseMessageBase OnVideoRequest(RequestMessageVideo requestMessage)
+        public virtual IWorkResponseMessageBase OnVideoRequest(RequestMessageVideo requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -396,7 +313,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// 小视频类型请求
         /// </summary>
-        public virtual IResponseMessageBase OnShortVideoRequest(RequestMessageShortVideo requestMessage)
+        public virtual IWorkResponseMessageBase OnShortVideoRequest(RequestMessageShortVideo requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -405,7 +322,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// 文件类型请求
         /// </summary>
-        public virtual IResponseMessageBase OnFileRequest(RequestMessageFile requestMessage)
+        public virtual IWorkResponseMessageBase OnFileRequest(RequestMessageFile requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -414,10 +331,10 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// Event事件类型请求
         /// </summary>
-        public virtual IResponseMessageBase OnEventRequest(IRequestMessageEventBase requestMessage)
+        public virtual IWorkResponseMessageBase OnEventRequest(IRequestMessageEventBase requestMessage)
         {
             var strongRequestMessage = RequestMessage as IRequestMessageEventBase;
-            IResponseMessageBase responseMessage = null;
+            IWorkResponseMessageBase responseMessage = null;
             switch (strongRequestMessage.Event)
             {
                 case Event.CLICK://菜单点击
@@ -459,6 +376,35 @@ namespace Senparc.Weixin.Work.MessageHandlers
                 case Event.BATCH_JOB_RESULT://异步任务完成事件推送(batch_job_result)
                     responseMessage = OnEvent_BatchJobResultRequest(RequestMessage as RequestMessageEvent_Batch_Job_Result);
                     break;
+                case Event.change_contact:
+                    var ccRequestMessage = RequestMessage as IRequestMessageEvent_Change_Contact_Base;
+                    switch (ccRequestMessage.ChangeType)
+                    {
+                        case ContactChangeType.create_user:
+                            responseMessage = OnEvent_ChangeContactCreateUserRequest(RequestMessage as RequestMessageEvent_Change_Contact_User_Create);
+                            break;
+                        case ContactChangeType.update_user:
+                            responseMessage = OnEvent_ChangeContactUpdateUserRequest(RequestMessage as RequestMessageEvent_Change_Contact_User_Update);
+                            break;
+                        case ContactChangeType.delete_user:
+                            responseMessage = OnEvent_ChangeContactDeleteUserRequest(RequestMessage as RequestMessageEvent_Change_Contact_User_Base);
+                            break;
+                        case ContactChangeType.create_party:
+                            responseMessage = OnEvent_ChangeContactCreatePartyRequest(RequestMessage as RequestMessageEvent_Change_Contact_Party_Create);
+                            break;
+                        case ContactChangeType.update_party:
+                            responseMessage = OnEvent_ChangeContactUpdatePartyRequest(RequestMessage as RequestMessageEvent_Change_Contact_Party_Update);
+                            break;
+                        case ContactChangeType.delete_party:
+                            responseMessage = OnEvent_ChangeContactDeletePartyRequest(RequestMessage as RequestMessageEvent_Change_Contact_Party_Base);
+                            break;
+                        case ContactChangeType.update_tag:
+                            responseMessage = OnEvent_ChangeContactUpdateTagRequest(RequestMessage as RequestMessageEvent_Change_Contact_Tag_Update);
+                            break;
+                        default:
+                            throw new UnknownRequestMsgTypeException("未知的Event.change_contact下属请求信息", null);
+                    }
+                    break;
                 default:
                     throw new UnknownRequestMsgTypeException("未知的Event下属请求信息", null);
             }
@@ -471,7 +417,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// <summary>
         /// Event事件类型请求之CLICK
         /// </summary>
-        public virtual IResponseMessageBase OnEvent_ClickRequest(RequestMessageEvent_Click requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_ClickRequest(RequestMessageEvent_Click requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -480,7 +426,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 事件之URL跳转视图（View）
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_ViewRequest(RequestMessageEvent_View requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_ViewRequest(RequestMessageEvent_View requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -489,7 +435,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 弹出拍照或者相册发图
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_PicPhotoOrAlbumRequest(RequestMessageEvent_Pic_Photo_Or_Album requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_PicPhotoOrAlbumRequest(RequestMessageEvent_Pic_Photo_Or_Album requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -498,7 +444,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 扫码推事件
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_ScancodePushRequest(RequestMessageEvent_Scancode_Push requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_ScancodePushRequest(RequestMessageEvent_Scancode_Push requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -507,7 +453,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 扫码推事件且弹出“消息接收中”提示框
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_ScancodeWaitmsgRequest(RequestMessageEvent_Scancode_Waitmsg requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_ScancodeWaitmsgRequest(RequestMessageEvent_Scancode_Waitmsg requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -516,7 +462,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 弹出地理位置选择器
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_LocationSelectRequest(RequestMessageEvent_Location_Select requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_LocationSelectRequest(RequestMessageEvent_Location_Select requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -525,7 +471,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 弹出微信相册发图器
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_PicWeixinRequest(RequestMessageEvent_Pic_Weixin requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_PicWeixinRequest(RequestMessageEvent_Pic_Weixin requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -534,7 +480,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 弹出系统拍照发图
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_PicSysphotoRequest(RequestMessageEvent_Pic_Sysphoto requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_PicSysphotoRequest(RequestMessageEvent_Pic_Sysphoto requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -543,7 +489,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 订阅
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_SubscribeRequest(RequestMessageEvent_Subscribe requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_SubscribeRequest(RequestMessageEvent_Subscribe requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -552,7 +498,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 取消订阅
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_UnSubscribeRequest(RequestMessageEvent_UnSubscribe requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_UnSubscribeRequest(RequestMessageEvent_UnSubscribe requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -561,7 +507,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 上报地理位置事件
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_LocationRequest(RequestMessageEvent_Location requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_LocationRequest(RequestMessageEvent_Location requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -570,7 +516,7 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// 用户进入应用的事件推送(enter_agent)
         /// </summary>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_EnterAgentRequest(RequestMessageEvent_Enter_Agent requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_EnterAgentRequest(RequestMessageEvent_Enter_Agent requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
@@ -580,10 +526,74 @@ namespace Senparc.Weixin.Work.MessageHandlers
         /// </summary>
         /// <param name="requestMessage"></param>
         /// <returns></returns>
-        public virtual IResponseMessageBase OnEvent_BatchJobResultRequest(RequestMessageEvent_Batch_Job_Result requestMessage)
+        public virtual IWorkResponseMessageBase OnEvent_BatchJobResultRequest(RequestMessageEvent_Batch_Job_Result requestMessage)
         {
             return DefaultResponseMessage(requestMessage);
         }
+        /// <summary>
+        /// 新增成员事件推送
+        /// </summary>
+        /// <param name="requestMessage"></param>
+        /// <returns></returns>
+        public virtual IWorkResponseMessageBase OnEvent_ChangeContactCreateUserRequest(RequestMessageEvent_Change_Contact_User_Create requestMessage)
+        {
+            return DefaultResponseMessage(requestMessage);
+        }
+        /// <summary>
+        /// 更新成员事件推送
+        /// </summary>
+        /// <param name="requestMessage"></param>
+        /// <returns></returns>
+        public virtual IWorkResponseMessageBase OnEvent_ChangeContactUpdateUserRequest(RequestMessageEvent_Change_Contact_User_Update requestMessage)
+        {
+            return DefaultResponseMessage(requestMessage);
+        }
+        /// <summary>
+        /// 删除成员事件推送
+        /// </summary>
+        /// <param name="requestMessage"></param>
+        /// <returns></returns>
+        public virtual IWorkResponseMessageBase OnEvent_ChangeContactDeleteUserRequest(RequestMessageEvent_Change_Contact_User_Base requestMessage)
+        {
+            return DefaultResponseMessage(requestMessage);
+        }
+        /// <summary>
+        /// 新增部门事件推送
+        /// </summary>
+        /// <param name="requestMessage"></param>
+        /// <returns></returns>
+        public virtual IWorkResponseMessageBase OnEvent_ChangeContactCreatePartyRequest(RequestMessageEvent_Change_Contact_Party_Create requestMessage)
+        {
+            return DefaultResponseMessage(requestMessage);
+        }
+        /// <summary>
+        /// 更新部门事件推送
+        /// </summary>
+        /// <param name="requestMessage"></param>
+        /// <returns></returns>
+        public virtual IWorkResponseMessageBase OnEvent_ChangeContactUpdatePartyRequest(RequestMessageEvent_Change_Contact_Party_Update requestMessage)
+        {
+            return DefaultResponseMessage(requestMessage);
+        }
+        /// <summary>
+        /// 删除部门事件推送
+        /// </summary>
+        /// <param name="requestMessage"></param>
+        /// <returns></returns>
+        public virtual IWorkResponseMessageBase OnEvent_ChangeContactDeletePartyRequest(RequestMessageEvent_Change_Contact_Party_Base requestMessage)
+        {
+            return DefaultResponseMessage(requestMessage);
+        }
+        /// <summary>
+        /// 标签成员变更事件推送
+        /// </summary>
+        /// <param name="requestMessage"></param>
+        /// <returns></returns>
+        public virtual IWorkResponseMessageBase OnEvent_ChangeContactUpdateTagRequest(RequestMessageEvent_Change_Contact_Tag_Update requestMessage)
+        {
+            return DefaultResponseMessage(requestMessage);
+        }
+
         #endregion
 
 
@@ -603,14 +613,14 @@ namespace Senparc.Weixin.Work.MessageHandlers
                     return OnThirdPartyEvent_Cancel_Auth((RequestMessageInfo_Cancel_Auth)thirdPartyInfo);
                 case ThirdPartyInfo.CREATE_AUTH:
                     return OnThirdPartyEvent_Create_Auth((RequestMessageInfo_Create_Auth)thirdPartyInfo);
-                case ThirdPartyInfo.CONTACT_SYNC:
-                    return OnThirdPartyEvent_Contact_Sync((RequestMessageInfo_Contact_Sync)thirdPartyInfo);
+                case ThirdPartyInfo.CHANGE_CONTACT:
+                    return OnThirdPartyEvent_Change_Contact((RequestMessageInfo_Change_Contact)thirdPartyInfo);
                 default:
                     throw new UnknownRequestMsgTypeException("未知的InfoType请求类型", null);
             }
         }
 
-        protected virtual string OnThirdPartyEvent_Contact_Sync(RequestMessageInfo_Contact_Sync thirdPartyInfo)
+        protected virtual string OnThirdPartyEvent_Change_Contact(RequestMessageInfo_Change_Contact thirdPartyInfo)
         {
             return ThirdPartyEventSuccessResult;
         }

@@ -1,7 +1,7 @@
 ﻿#region Apache License Version 2.0
 /*----------------------------------------------------------------
 
-Copyright 2018 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
+Copyright 2019 Jeffrey Su & Suzhou Senparc Network Technology Co.,Ltd.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 except in compliance with the License. You may obtain a copy of the License at
@@ -22,28 +22,30 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Senparc.Weixin.Context;
+using Senparc.NeuChar.Context;
 using Senparc.Weixin.Work.Entities;
 using Senparc.Weixin.Work.Helpers;
 using Senparc.Weixin.Work.MessageHandlers;
+using Senparc.WeixinTests;
 
 namespace Senparc.Weixin.Work.Test.MessageHandlers
 {
-    [Microsoft.VisualStudio.TestTools.UnitTesting.TestClass]
-    public class WorkMessageHandlersTest
+    [TestClass]
+    public class WorkMessageHandlersTest:BaseTest
     {
-        public class CustomMessageHandlers : WorkMessageHandler<MessageContext<IRequestMessageBase, IResponseMessageBase>>
+        public class CustomMessageHandlers : WorkMessageHandler<MessageContexts.DefaultWorkMessageContext>
         {
             public CustomMessageHandlers(XDocument requestDoc, PostModel postModel, int maxRecordCount = 0)
                 : base(requestDoc, postModel, maxRecordCount)
             {
             }
 
-            public override IResponseMessageBase OnTextRequest(RequestMessageText requestMessage)
+            public override IWorkResponseMessageBase OnTextRequest(RequestMessageText requestMessage)
             {
                 var responseMessage = RequestMessage.CreateResponseMessage<ResponseMessageText>();
 
@@ -57,11 +59,16 @@ namespace Senparc.Weixin.Work.Test.MessageHandlers
             /// </summary>
             /// <param name="requestMessage"></param>
             /// <returns></returns>
-            public override IResponseMessageBase DefaultResponseMessage(IRequestMessageBase requestMessage)
+            public override IWorkResponseMessageBase DefaultResponseMessage(IWorkRequestMessageBase requestMessage)
             {
                 var responseMessage = this.CreateResponseMessage<ResponseMessageText>();
                 responseMessage.Content = "这是一条默认消息。";
                 return responseMessage;
+            }
+
+            public override Task BuildResponseMessageAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
             }
         }
 
@@ -78,13 +85,13 @@ namespace Senparc.Weixin.Work.Test.MessageHandlers
         {
             var postModel = new PostModel()
             {
-                Msg_Signature = "845997ceb6e4fd73edd9a377be227848ce20d34f",
-                Timestamp = "1412587525",
-                Nonce = "1501543730",
+                Msg_Signature = "",
+                Timestamp = "",
+                Nonce = "",
 
-                Token = "fzBsmSaI8XE1OwBh",
-                EncodingAESKey = "9J8CQ7iF9mLtQDZrUM1loOVQ6oNDxVtBi1DBU2oaewl",
-                CorpId = "wx7618c0a6d9358622"
+                Token = "",
+                EncodingAESKey = "",
+                CorpId = ""
             };
             var messageHandler = new CustomMessageHandlers(XDocument.Parse(testXml), postModel, 10);
             Assert.IsNotNull(messageHandler.RequestDocument);

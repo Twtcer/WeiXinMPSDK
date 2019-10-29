@@ -2,7 +2,7 @@
 
 MP项目为例：
 
-1. Enums.cs，在 RequestMsgType 枚举中添加对应类型（如File）
+1. Enums.cs，在 RequestMsgType 枚举（目前已统一到 NeuChar 中，Event 的具体类型仍然保留在项目中）中添加对应类型（如File）
 
 2. Entities/Request 目录下添加对应类，如：RequestMessageFile.cs
 
@@ -54,5 +54,12 @@ MP项目为例：
         case RequestMsgType.File:
             ResponseMessage = await OnFileRequestAsync(RequestMessage as RequestMessageFile);
             break;
+```
 
+8. 在 DefaultXXMessageContext.cs 中，GetRequestEntityMappingResult() 方法内，添加对应类型的 switch 判断，如：
+
+``` C#
+        case RequestMsgType.Text:
+            requestMessage = new RequestMessageText();
+            break;
 ```
